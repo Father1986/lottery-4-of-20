@@ -48,6 +48,8 @@ contract lottery_6_45 is MyAdvancedToken
         lotteries[0].tickets_count = 0;
         lotteries[0].prize_combination = [1,2,3,4,5,6];
     }
+    // Событие покупки билета
+    event BuyTicket(uint ticket_number, uint ticket_price, address ticket_owner, uint buy_time, uint lottery_number, string lottery_type, uint8[] ticket_numbers );
     
     /*функция чтения билетов
      *Создано Вопиловым А.
@@ -87,11 +89,17 @@ contract lottery_6_45 is MyAdvancedToken
         compliance_level = 0;
         for(uint i = 0; i < 13; i++)
         {
-            for(uint k = 0; k < 6; k++)
-            {
-                if(ticket_numbers[i] == lotteries[last_lottery_id].prize_combination[k])
-                    compliance_level++;
+            bool complianceLevelUp = false;
+            uint j = 0;
+            // длина комбинации ))
+            uint prize_combination_lenght = 6;
+            //uint prizeСombinationLenght = lotteries[last_lottery_id].prize_combination.lenght;
+            while (!complianceLevelUp || j < prize_combination_lenght) {
+                if(ticket_numbers[i] == lotteries[last_lottery_id].prize_combination[j]){
+                    complianceLevelUp = true;
+                }
             }
+            if(complianceLevelUp) compliance_level++;
         }
         return compliance_level;
     }
@@ -110,30 +118,32 @@ contract lottery_6_45 is MyAdvancedToken
         uint numbers_3_of_6;//сколько в тираже оказалось билетов с 3 верными номерами
         uint regularLotteryCountedPrize;//размер распределяемого приза основной лотереи
         uint JackPotCountedPrize;//размер распределяемого приза джек-пота
+        uint8 ticketComplianceLevel; 
         //обходим все билеты в лотерее чтобы узнать, сколько каких билетов выиграло и установить им уровень выигрыша
         for (uint i = 0; i < lotteries[last_lottery_id].tickets_count; i++)
         {
-            lotteries[last_lottery_id].tickets[i].compliance_level = ticket_compliance_level(lotteries[last_lottery_id].tickets[i].numbers);
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 3) numbers_3_of_6++;
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 4) numbers_4_of_6++;
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 5) numbers_5_of_6++;
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 6) jack_pot_numbers++;
+            ticketComplianceLevel = ticket_compliance_level(lotteries[last_lottery_id].tickets[i].numbers);
+            lotteries[last_lottery_id].tickets[i].compliance_level = ticketComplianceLevel;
+            if(ticketComplianceLevel == 3) numbers_3_of_6++;
+            if(ticketComplianceLevel == 4) numbers_4_of_6++;
+            if(ticketComplianceLevel == 5) numbers_5_of_6++;
+            if(ticketComplianceLevel == 6) jack_pot_numbers++;
         }
         //обходим все билеты в лотерее чтобы разделить между ними выигрыш, записываем размер выигрыша в каждый билет
         for (i = 0; i < lotteries[last_lottery_id].tickets_count; i++)
         {
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 3)
+            ticketComplianceLevel = lotteries[last_lottery_id].tickets[i].compliance_level;
+            if(ticketComplianceLevel == 3)
                 lotteries[last_lottery_id].tickets[i].money = regularPrize * (won_percent[0]) / (numbers_3_of_6 * 100);
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 4)
+            if(ticketComplianceLevel == 4)
                 lotteries[last_lottery_id].tickets[i].money = regularPrize * (won_percent[1]) / (numbers_4_of_6 * 100);
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 5)
+            if(ticketComplianceLevel == 5)
                 lotteries[last_lottery_id].tickets[i].money = regularPrize * (won_percent[2]) / (numbers_5_of_6 * 100);
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 6)
+            if(ticketComplianceLevel == 6)
                 lotteries[last_lottery_id].tickets[i].money = JackPot / jack_pot_numbers;
-            if(lotteries[last_lottery_id].tickets[i].compliance_level < 6)
-                regularLotteryCountedPrize += lotteries[last_lottery_id].tickets[i].money; //шаг за шагом вычисляем, сколько денег мы распределим из основной лотереи
-            if(lotteries[last_lottery_id].tickets[i].compliance_level == 6)
-                JackPotCountedPrize += lotteries[last_lottery_id].tickets[i].money; //шаг за шагом вычисляем, сколько денег мы распределим из джек пота
+                
+            if(ticketComplianceLevel < 6) regularLotteryCountedPrize += lotteries[last_lottery_id].tickets[i].money; //шаг за шагом вычисляем, сколько денег мы распределим из основной лотереи
+            if(ticketComplianceLevel == 6) JackPotCountedPrize += lotteries[last_lottery_id].tickets[i].money; //шаг за шагом вычисляем, сколько денег мы распределим из джек пота
             balanceOf[lotteries[last_lottery_id].tickets[i].owner] += lotteries[last_lottery_id].tickets[i].money;//перечисление средств за выигрыш на счет победителя
         }
         regularPrize -= regularLotteryCountedPrize;//рассчитываем остаток от основного приза
@@ -193,13 +203,21 @@ contract lottery_6_45 is MyAdvancedToken
         ticked_for_checking.owner = msg.sender;
         ticked_for_checking.time = "06.11.2017";
         ticked_for_checking.valuable_numbers = valuable_numbers;
-        lotteries[last_lottery_id].tickets[lotteries[last_lottery_id].tickets_count] = ticked_for_checking;
+        uint current_ticket_number = lotteries[last_lottery_id].tickets_count;
+        lotteries[last_lottery_id].tickets[current_ticket_number] = ticked_for_checking;
         lotteries[last_lottery_id].tickets_count++;
         uint current_ticket_price = get_ticket_price(valuable_numbers);// расчет текущей цены билета из количества выбранных чисел в нем
         if (balanceOf[msg.sender] < current_ticket_price) return false;
         balanceOf[msg.sender] -= current_ticket_price;
         JackPot += (current_ticket_price * JackPot_assignment) / 100;//в джекпот отправляется только часть средств с билета, другая часть отправляется в регулярный фонд
-        regularPrize += (current_ticket_price * JackPot_assignment) / 100;//в регулярный приз лотереи отправляется только часть средств с билета, другая часть отправляется в джек пот
+        regularPrize += (current_ticket_price * regularPrize_assignment) / 100;//в регулярный приз лотереи отправляется только часть средств с билета, другая часть отправляется в джек пот
+        
+        uint8[] memory temp;
+        for (uint8 i = 0; i < 13; i++ ){
+            temp[i] = ticked_for_checking.numbers[i];
+        }
+        BuyTicket(current_ticket_number, current_ticket_price, msg.sender, now, last_lottery_id , "Lottery 6 45", temp);
+        
         return true;
     }
     
@@ -246,7 +264,7 @@ contract lottery_6_45 is MyAdvancedToken
      *return uint256 fact - значение факториала числа
      *10.11.2017
      */
-    function factorial(uint256 number) internal constant returns(uint256 fact)
+    function factorial(uint256 number) internal constant returns(uint256 fact) 
     {
         fact = 1;
         if(number == 0) return 1;
