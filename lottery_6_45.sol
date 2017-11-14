@@ -34,6 +34,7 @@ contract lottery_6_45 is MyAdvancedToken
         mapping(uint => ticket) tickets; //все билеты одной лотереи.
         uint tickets_count; //количество билетов в этой лотерее
         uint[6] prize_combination; //выигрышная комбинация текущего тиража лотереи
+        bool active;
     }
     mapping (uint => lottery) public lotteries;
 
@@ -47,6 +48,7 @@ contract lottery_6_45 is MyAdvancedToken
         lotteries[0].date = "06.11.2017";
         lotteries[0].tickets_count = 0;
         lotteries[0].prize_combination = [1,2,3,4,5,6];
+        lotteries[0].active = true;
     }
     // Событие покупки билета
     event BuyTicket(uint ticket_number, uint ticket_price, address ticket_owner, uint buy_time, uint lottery_number, string lottery_type, uint8[] ticket_numbers );
@@ -73,7 +75,20 @@ contract lottery_6_45 is MyAdvancedToken
      */ 
     function finish_lottery() onlyOwner public returns (bool success)
     {
+        require(!lotteries[last_lottery_id].active);
         calculate_prizes();
+        return true;
+    }
+    
+    /*Функция смены статуса текущего тиража лотереи
+     *Создано Вопиловым А.
+     *@lottery_activity bool новый статус лотереи 
+     *return bool success - успешность проведения
+     *14.11.2017
+     */ 
+    function change_status(bool lottery_activity) onlyOwner public returns (bool success)
+    {
+        lotteries[last_lottery_id].active = lottery_activity;
         return true;
     }
     
@@ -191,13 +206,14 @@ contract lottery_6_45 is MyAdvancedToken
      */
     function check_ticket_buying(ticket ticked_for_checking) internal returns (bool success)
     {
+        require(lotteries[last_lottery_id].active);
         var(allowability, valuable_numbers) = allowable_big_ticket(ticked_for_checking.numbers);
         require(allowability);
         ticked_for_checking.owner = msg.sender;
         ticked_for_checking.time = "06.11.2017";
         ticked_for_checking.valuable_numbers = valuable_numbers;
-        uint current_ticket_number = lotteries[last_lottery_id].tickets_count;
-        lotteries[last_lottery_id].tickets[current_ticket_number] = ticked_for_checking;
+        //uint current_ticket_number = lotteries[last_lottery_id].tickets_count;
+        lotteries[last_lottery_id].tickets[lotteries[last_lottery_id].tickets_count] = ticked_for_checking;
         lotteries[last_lottery_id].tickets_count++;
         uint current_ticket_price = get_ticket_price(valuable_numbers);// расчет текущей цены билета из количества выбранных чисел в нем
         if (balanceOf[msg.sender] < current_ticket_price) return false;
@@ -210,7 +226,6 @@ contract lottery_6_45 is MyAdvancedToken
             temp[i] = ticked_for_checking.numbers[i];
         }*/
         //BuyTicket(current_ticket_number, current_ticket_price, msg.sender, now, last_lottery_id , "Lottery 6 45", temp);
-        
         return true;
     }
     
