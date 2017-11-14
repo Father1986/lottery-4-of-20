@@ -54,7 +54,7 @@ contract lottery_6_45 is MyAdvancedToken
     /*функция чтения билетов
      *Создано Вопиловым А.
      *@lottery_id идентификатор лотереи
-     *@ticket_Id ноомер билета игрока
+     *@ticket_Id номер билета игрока
      *6.11.2017
      */
     function getTicket(uint lottery_id,uint ticket_Id) public view returns (uint8[13] ticket_numbers, uint8 ticket_prize_level,uint8 numbers_in_ticket,uint money)
@@ -89,17 +89,11 @@ contract lottery_6_45 is MyAdvancedToken
         compliance_level = 0;
         for(uint i = 0; i < 13; i++)
         {
-            bool complianceLevelUp = false;
-            uint j = 0;
-            // длина комбинации ))
-            uint prize_combination_lenght = 6;
-            //uint prizeСombinationLenght = lotteries[last_lottery_id].prize_combination.lenght;
-            while (!complianceLevelUp || j < prize_combination_lenght) {
-                if(ticket_numbers[i] == lotteries[last_lottery_id].prize_combination[j]){
-                    complianceLevelUp = true;
-                }
+            for(uint k = 0; k < 6; k++)
+            {
+                if(ticket_numbers[i] == lotteries[last_lottery_id].prize_combination[k])
+                    compliance_level++;
             }
-            if(complianceLevelUp) compliance_level++;
         }
         return compliance_level;
     }
@@ -141,7 +135,6 @@ contract lottery_6_45 is MyAdvancedToken
                 lotteries[last_lottery_id].tickets[i].money = regularPrize * (won_percent[2]) / (numbers_5_of_6 * 100);
             if(ticketComplianceLevel == 6)
                 lotteries[last_lottery_id].tickets[i].money = JackPot / jack_pot_numbers;
-                
             if(ticketComplianceLevel < 6) regularLotteryCountedPrize += lotteries[last_lottery_id].tickets[i].money; //шаг за шагом вычисляем, сколько денег мы распределим из основной лотереи
             if(ticketComplianceLevel == 6) JackPotCountedPrize += lotteries[last_lottery_id].tickets[i].money; //шаг за шагом вычисляем, сколько денег мы распределим из джек пота
             balanceOf[lotteries[last_lottery_id].tickets[i].owner] += lotteries[last_lottery_id].tickets[i].money;//перечисление средств за выигрыш на счет победителя
@@ -159,7 +152,7 @@ contract lottery_6_45 is MyAdvancedToken
      *return bool success - результат переноса фонда
      *9.11.2017
      */
-    function donate_next_lottery() internal returns (bool )
+    function donate_next_lottery() internal returns (bool)
     {
         
     }
@@ -211,12 +204,12 @@ contract lottery_6_45 is MyAdvancedToken
         balanceOf[msg.sender] -= current_ticket_price;
         JackPot += (current_ticket_price * JackPot_assignment) / 100;//в джекпот отправляется только часть средств с билета, другая часть отправляется в регулярный фонд
         regularPrize += (current_ticket_price * regularPrize_assignment) / 100;//в регулярный приз лотереи отправляется только часть средств с билета, другая часть отправляется в джек пот
-        
+        /*
         uint8[] memory temp;
         for (uint8 i = 0; i < 13; i++ ){
             temp[i] = ticked_for_checking.numbers[i];
-        }
-        BuyTicket(current_ticket_number, current_ticket_price, msg.sender, now, last_lottery_id , "Lottery 6 45", temp);
+        }*/
+        //BuyTicket(current_ticket_number, current_ticket_price, msg.sender, now, last_lottery_id , "Lottery 6 45", temp);
         
         return true;
     }
